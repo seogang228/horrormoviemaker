@@ -18,7 +18,8 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:20px;padding:16p
 @media(max-width:900px){main{grid-template-columns:1fr;padding:12px}}
 #stage{position:relative;background:#000;border:1px solid var(--ln);min-height:240px;display:grid;place-items:center}
 #cv{max-width:100%;height:auto;display:block;cursor:crosshair;touch-action:none}
-#empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--dim);padding:20px}
+#empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--dim);padding:20px;pointer-events:none}
+#empty[hidden]{display:none}
 #empty b{color:var(--bone);display:block;font-size:17px;margin-bottom:6px}
 #stage.over{outline:2px dashed var(--cy)}
 .hint{color:var(--dim);font-size:13px;margin:8px 0 0}
@@ -101,7 +102,7 @@ const base=document.createElement('canvas'),bx=base.getContext('2d',{willReadFre
 const TINT={night:[.72,1.06,.8],cold:[.82,.98,1.12],vhs:[1.1,1,.76],mono:[1,1,1]};
 const COL=['#37e6d0','#ff3d8b','#f5e642','#ff6a2b'];
 let img=null,W=480,H=360,out=null,rs=null,busy=false,drag=null;
-let subs=[{text:'…거기 누구 있어?',a:.5,b:2.5}],faces=[];
+let subs=[],faces=[];
 
 /* ---------- 이미지 불러오기 ---------- */
 function load(file){
@@ -243,7 +244,7 @@ requestAnimationFrame(loop);
 
 /* ---------- 자막 UI ---------- */
 function listSubs(){
-  $('#subs').innerHTML=subs.map((s,i)=>`<div class="row"><input data-k="text" data-i="${i}" value="${esc(s.text)}" placeholder="자막 내용" aria-label="자막 내용"><input type="number" step=".1" min="0" data-k="a" data-i="${i}" value="${s.a}" aria-label="시작 초"><input type="number" step=".1" min="0" data-k="b" data-i="${i}" value="${s.b}" aria-label="끝 초"><button data-del="${i}" aria-label="자막 삭제">✕</button></div>`).join('');
+  $('#subs').innerHTML=subs.length?subs.map((s,i)=>`<div class="row"><input data-k="text" data-i="${i}" value="${esc(s.text)}" placeholder="자막 내용" aria-label="자막 내용"><input type="number" step=".1" min="0" data-k="a" data-i="${i}" value="${s.a}" aria-label="시작 초"><input type="number" step=".1" min="0" data-k="b" data-i="${i}" value="${s.b}" aria-label="끝 초"><button data-del="${i}" aria-label="자막 삭제">✕</button></div>`).join(''):'<p class="hint">자막이 없어요. 아래 버튼으로 추가해 보세요.</p>';
 }
 $('#subs').oninput=e=>{const t=e.target,i=t.dataset.i;if(i!=null)subs[i][t.dataset.k]=t.dataset.k==='text'?t.value:+t.value};
 $('#subs').onclick=e=>{const i=e.target.dataset.del;if(i!=null){subs.splice(i,1);listSubs()}};
@@ -252,7 +253,7 @@ listSubs();
 
 /* ---------- 얼굴 박스 UI ---------- */
 function listFaces(){
-  $('#faces').innerHTML=faces.length?faces.map((f,i)=>`<div class="face" style="border-color:${f.c}"><input data-k="title" data-i="${i}" value="${esc(f.title)}" aria-label="박스 이름"><button data-del="${i}" aria-label="박스 삭제">✕</button><textarea data-k="info" data-i="${i}" rows="3" aria-label="박스 정보">${esc(f.info)}</textarea></div>`).join(''):'<p class="hint">화면을 드래그해서 박스를 그려 보세요.</p>';
+  $('#faces').innerHTML=faces.length?faces.map((f,i)=>`<div class="face" style="border-color:${f.c}"><input data-k="title" data-i="${i}" value="${esc(f.title)}" placeholder="박스 제목" aria-label="박스 제목"><button data-del="${i}" aria-label="박스 삭제">✕</button><textarea data-k="info" data-i="${i}" rows="3" placeholder="정보를 한 줄에 하나씩 적으세요" aria-label="박스 정보">${esc(f.info)}</textarea></div>`).join(''):'<p class="hint">화면을 드래그해서 박스를 그려 보세요.</p>';
 }
 $('#faces').oninput=e=>{const t=e.target,i=t.dataset.i;if(i!=null)faces[i][t.dataset.k]=t.value};
 $('#faces').onclick=e=>{const i=e.target.dataset.del;if(i!=null){faces.splice(i,1);listFaces()}};
@@ -270,8 +271,11 @@ cv.onpointermove=e=>{
 };
 cv.onpointerup=()=>{
   if(drag&&drag.nw){const n=drag.nw;if(n.w>.02&&n.h>.02){n.title='TARGET-'+String(faces.length+1).padStart(2,'0');n.info='NAME: UNKNOWN\nSTATUS: ???';faces.push(n)}}
+  const made=drag&&drag.nw&&faces.includes(drag.nw);
   drag=null;listFaces();
+  if(made){const ta=$('#faces').querySelector(`textarea[data-i="${faces.length-1}"]`);if(ta){ta.focus();ta.select()}}
 };
+cv.onpointercancel=()=>{drag=null};
 
 /* ---------- GIF 인코더 (외부 라이브러리 없음) ---------- */
 function buildPalette(hist,n){
