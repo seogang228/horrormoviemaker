@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NIGHT TAPE · 공포영화 필터 GIF 메이커</title>
+<style>
+:root{--bg:#0c0e0d;--pn:#141816;--ln:#2a322e;--bone:#d3d6c8;--dim:#8a9188;--red:#d3392b;--cy:#37e6d0;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--bone);font:15px/1.5 "Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif}
+header{padding:22px 24px 6px}
+h1{margin:0;font:700 26px ui-monospace,"Courier New",monospace;letter-spacing:.04em}
+h1 i{color:var(--red);font-style:normal;animation:b 1s steps(1) infinite}
+@keyframes b{50%{opacity:0}}
+@media(prefers-reduced-motion:reduce){h1 i{animation:none}}
+header p{margin:4px 0 0;color:var(--dim)}
+main{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:20px;padding:16px 24px 40px;align-items:start}
+@media(max-width:900px){main{grid-template-columns:1fr;padding:12px}}
+#stage{position:relative;background:#000;border:1px solid var(--ln);min-height:240px;display:grid;place-items:center}
+#cv{max-width:100%;height:auto;display:block;cursor:crosshair;touch-action:none}
+#empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--dim);padding:20px}
+#empty b{color:var(--bone);display:block;font-size:17px;margin-bottom:6px}
+#stage.over{outline:2px dashed var(--cy)}
+.hint{color:var(--dim);font-size:13px;margin:8px 0 0}
+section{background:var(--pn);border:1px solid var(--ln);padding:12px 14px;margin-bottom:12px}
+h2{margin:0 0 8px;font-size:15px}
+label{display:grid;grid-template-columns:78px 1fr 34px;align-items:center;gap:8px;font-size:13px;color:var(--dim)}
+label output{text-align:right}
+.r2{display:grid;grid-template-columns:78px 1fr;gap:8px;align-items:center;font-size:13px;color:var(--dim);margin-top:6px}
+input,select,textarea,button{font:inherit;color:var(--bone);background:#0c0f0e;border:1px solid var(--ln);padding:5px 8px;border-radius:3px;min-width:0}
+input[type=range]{padding:0;accent-color:var(--red)}
+input[type=checkbox]{accent-color:var(--red)}
+button{cursor:pointer}
+button:hover{border-color:var(--bone)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--cy);outline-offset:1px}
+.btn{background:var(--red);border-color:var(--red);color:#fff;font-weight:700;width:100%;padding:10px}
+.btn:disabled{opacity:.6;cursor:wait}
+.row{display:grid;grid-template-columns:1fr 56px 56px 30px;gap:4px;margin-bottom:6px}
+.row input[type=number]{padding:5px 4px}
+.face{border-left:3px solid var(--cy);padding-left:8px;margin-bottom:10px;display:grid;grid-template-columns:1fr 30px;gap:4px}
+.face textarea{grid-column:1/3;resize:vertical;font:12px/1.4 ui-monospace,"Courier New",monospace}
+#out{margin-top:10px;text-align:center}
+#out img{max-width:100%;border:1px solid var(--ln)}
+#out a{color:var(--cy)}
+</style>
+</head>
+<body>
+<header>
+  <h1><i>●</i> NIGHT TAPE</h1>
+  <p>사진을 넣으면 낡은 캠코더로 찍은 공포영화 화면처럼 떨리는 GIF로 만들어 줍니다.</p>
+</header>
+<main>
+  <div>
+    <div id="stage">
+      <canvas id="cv" width="480" height="360"></canvas>
+      <div id="empty"><div><b>이미지를 여기에 끌어다 놓으세요</b>또는 오른쪽에서 파일 선택 · 붙여넣기(Ctrl+V)</div></div>
+    </div>
+    <p class="hint">화면을 드래그하면 얼굴 박스가 생기고, 박스 안을 드래그하면 옮길 수 있어요. 미리보기는 GIF와 같은 속도로 재생됩니다.</p>
+    <div id="out"></div>
+  </div>
+  <div>
+    <section>
+      <h2>이미지</h2>
+      <input type="file" id="file" accept="image/*" style="width:100%">
+      <div class="r2">출력 크기<select id="size"><option value="320">작게 (320px)</option><option value="480" selected>보통 (480px)</option><option value="640">크게 (640px)</option></select></div>
+    </section>
+    <section>
+      <h2>공포 필터</h2>
+      <label>노이즈<input type="range" id="noise" value="45"><output></output></label>
+      <label>색 빠짐<input type="range" id="desat" value="65"><output></output></label>
+      <label>지지직<input type="range" id="glitch" value="40"><output></output></label>
+      <label>손떨림<input type="range" id="shake" value="35"><output></output></label>
+      <label>어두운 모서리<input type="range" id="vig" value="55"><output></output></label>
+      <div class="r2">색감<select id="tint"><option value="night">야간 촬영 초록</option><option value="cold">차가운 청회색</option><option value="vhs">누렇게 바랜 VHS</option><option value="mono">흑백</option></select></div>
+      <div class="r2">캠코더 표시<span><input type="checkbox" id="osd" checked> REC · 타임코드 &nbsp;<input id="cam" value="CAM 02" size="8"></span></div>
+    </section>
+    <section>
+      <h2>자막</h2>
+      <div id="subs"></div>
+      <button id="addSub">자막 추가</button>
+      <p class="hint">시간은 GIF 안의 초 단위입니다. 줄바꿈은 Enter 대신 \n 을 쓰세요.</p>
+    </section>
+    <section>
+      <h2>얼굴 박스</h2>
+      <div id="faces"><p class="hint">화면을 드래그해서 박스를 그려 보세요.</p></div>
+    </section>
+    <section>
+      <h2>GIF 만들기</h2>
+      <div class="r2">길이(초)<input type="number" id="dur" value="3" min="1" max="8" step=".5"></div>
+      <div class="r2">프레임<select id="fps"><option>8</option><option>10</option><option selected>12</option><option>15</option></select></div>
+      <p></p>
+      <button class="btn" id="go" disabled>GIF 저장하기</button>
+    </section>
+  </div>
+</main>
+<script>
+const $=s=>document.querySelector(s),v=id=>+$('#'+id).value,R=Math.random;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const cv=$('#cv'),ctx=cv.getContext('2d',{willReadFrequently:true});
+const base=document.createElement('canvas'),bx=base.getContext('2d',{willReadFrequently:true});
+const TINT={night:[.72,1.06,.8],cold:[.82,.98,1.12],vhs:[1.1,1,.76],mono:[1,1,1]};
+const COL=['#37e6d0','#ff3d8b','#f5e642','#ff6a2b'];
+let img=null,W=480,H=360,out=null,rs=null,busy=false,drag=null;
+let subs=[{text:'…거기 누구 있어?',a:.5,b:2.5}],faces=[];
+
+/* ---------- 이미지 불러오기 ---------- */
+function load(file){
+  if(!file||!file.type.startsWith('image/'))return;
+  const im=new Image();
+  im.onload=()=>{img=im;setSize();$('#empty').hidden=true;$('#go').disabled=false};
+  im.src=URL.createObjectURL(file);
+}
+function setSize(){
+  if(!img)return;
+  const k=v('size')/Math.max(img.naturalWidth,img.naturalHeight);
+  W=Math.max(2,Math.round(img.naturalWidth*k));H=Math.max(2,Math.round(img.naturalHeight*k));
+  cv.width=base.width=W;cv.height=base.height=H;
+  out=ctx.createImageData(W,H);rs=new Float32Array(H);
+}
+$('#file').onchange=e=>load(e.target.files[0]);
+$('#size').onchange=setSize;
+addEventListener('paste',e=>{for(const it of e.clipboardData.items)if(it.type.startsWith('image/'))load(it.getAsFile())});
+const st=$('#stage');
+st.ondragover=e=>{e.preventDefault();st.classList.add('over')};
+st.ondragleave=()=>st.classList.remove('over');
+st.ondrop=e=>{e.preventDefault();st.classList.remove('over');load(e.dataTransfer.files[0])};
+document.querySelectorAll('input[type=range]').forEach(r=>{const o=r.nextElementSibling;const u=()=>o.textContent=r.value;r.oninput=u;u()});
+
+/* ---------- 한 프레임 그리기 ---------- */
+function frame(t){
+  if(!img)return;
+  const u=W/480,fps=v('fps');
+  const noise=v('noise')/100,gl=v('glitch')/100,sh=v('shake')/100,vg=v('vig')/100,tint=$('#tint').value;
+  const sat=tint==='mono'?0:1-v('desat')/100*.92;
+  // 손떨림
+  const s=1.04+sh*.04,jx=(Math.sin(t*5.3)*.6+R()-.5)*sh*6*u,jy=(Math.sin(t*4.1+2)*.6+R()-.5)*sh*5*u;
+  bx.drawImage(img,(W-W*s)/2+jx,(H-H*s)/2+jy,W*s,H*s);
+  const src=bx.getImageData(0,0,W,H).data,d=out.data;
+  // 줄마다 가로로 밀기 (지지직)
+  rs.fill(0);
+  const bands=Math.floor(gl*4*R()+(R()<gl*.5?1:0));
+  for(let k=0;k<bands;k++){const y0=R()*H|0,h=4+R()*H*.06|0,dx=(R()-.5)*W*.2*gl;for(let y=y0;y<Math.min(H,y0+h);y++)rs[y]+=dx}
+  for(let y=H*.95|0;y<H;y++)rs[y]+=(y-H*.95)*(.8+gl*2)*u;
+  const ty=((t*.4)%1.4-.2)*H,th=H*.05;
+  const ca=Math.round((.5+gl*3)*u),fl=1+(R()-.5)*.12*(.3+gl),[tr,tg,tb]=TINT[tint],na=noise*90;
+  const cl=a=>a<0?0:a>=W?W-1:a;
+  for(let y=0;y<H;y++){
+    const bar=gl>0&&y>ty&&y<ty+th,sh2=(rs[y]+(bar?(R()-.5)*W*.05*gl:0))|0,row=y*W,sl=y&1?.84:1;
+    for(let x=0;x<W;x++){
+      const a=x+sh2;
+      let r=src[(row+cl(a+ca))*4],g=src[(row+cl(a))*4+1],b=src[(row+cl(a-ca))*4+2];
+      const l=.299*r+.587*g+.114*b;
+      r=l+(r-l)*sat;g=l+(g-l)*sat;b=l+(b-l)*sat;
+      const n=(R()-.5)*na+(bar?40*gl:0),i=(row+x)*4;
+      d[i]=((r*tr-128)*1.2+108)*fl*sl+n;
+      d[i+1]=((g*tg-128)*1.2+108)*fl*sl+n;
+      d[i+2]=((b*tb-128)*1.2+108)*fl*sl+n;
+      d[i+3]=255;
+    }
+  }
+  ctx.putImageData(out,0,0);
+  // 비네팅, 먼지, 스크래치
+  const gr=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*.3,W/2,H/2,Math.max(W,H)*.75);
+  gr.addColorStop(0,'rgba(0,0,0,0)');gr.addColorStop(1,`rgba(0,0,0,${vg*.85})`);
+  ctx.fillStyle=gr;ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='rgba(230,230,220,.5)';
+  for(let i=0;i<noise*6;i++)ctx.fillRect(R()*W,R()*H,u*(1+R()*2),u*(1+R()*2));
+  if(R()<.15*noise){ctx.fillStyle='rgba(230,230,220,.15)';ctx.fillRect(R()*W,0,u,H)}
+  ctx.textBaseline='alphabetic';
+  const osd=$('#osd').checked;
+  if(osd)drawOSD(t,u,fps);
+  const sb=subs.filter(q=>t>=q.a&&t<=q.b).pop();
+  if(sb&&sb.text)drawSub(sb.text.replace(/\\n/g,'\n'),u,osd,gl);
+  const all=drag&&drag.nw?[...faces,drag.nw]:faces;
+  all.forEach(F=>drawFace(F,t,u));
+}
+function chroma(str,x,y,font,fill,al,u){
+  ctx.font=font;ctx.textAlign=al;
+  ctx.fillStyle='rgba(255,40,40,.6)';ctx.fillText(str,x-u,y);
+  ctx.fillStyle='rgba(40,220,255,.5)';ctx.fillText(str,x+u,y);
+  ctx.fillStyle=fill;ctx.fillText(str,x,y);
+}
+function drawOSD(t,u,fps){
+  const m=12*u,f=`bold ${15*u}px ui-monospace,"Courier New",monospace`,p=n=>String(n).padStart(2,'0');
+  if(Math.floor(t*2)%2===0){ctx.fillStyle='#e22';ctx.beginPath();ctx.arc(m+6*u,m+9*u,5*u,0,7);ctx.fill()}
+  chroma('REC',m+16*u,m+14*u,f,'#ddd','left',u);
+  chroma($('#cam').value,W-m,m+14*u,f,'#ddd','right',u);
+  chroma('▶ PLAY',m,H-m,f,'#ddd','left',u);
+  const sec=Math.floor(t);
+  chroma(`00:${p(sec/60|0)}:${p(sec%60)}:${p(Math.floor((t%1)*fps))}`,W-m,H-m,f,'#ddd','right',u);
+}
+function drawSub(text,u,osd,gl){
+  const fs=Math.round(20*u);
+  ctx.font=`700 ${fs}px "Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif`;
+  ctx.textAlign='center';ctx.lineJoin='round';
+  const lines=[];
+  text.split('\n').forEach(p=>{let c='';for(const ch of p){if(ctx.measureText(c+ch).width>W*.84&&c){lines.push(c);c=ch.trim()?ch:''}else c+=ch}lines.push(c)});
+  const x=W/2+(R()<.05*gl?(R()-.5)*8*u:0);
+  let y=H-(osd?38:20)*u-(lines.length-1)*fs*1.25;
+  lines.forEach(l=>{ctx.lineWidth=5*u;ctx.strokeStyle='#000';ctx.strokeText(l,x,y);ctx.fillStyle='#eceee2';ctx.fillText(l,x,y);y+=fs*1.25});
+}
+function drawFace(F,t,u){
+  if(R()<.03)return;
+  const x=F.x*W,y=F.y*H,w=F.w*W,h=F.h*H,c=F.c;
+  ctx.save();
+  ctx.strokeStyle=c;ctx.fillStyle=c;ctx.shadowColor=c;ctx.shadowBlur=6*u;
+  ctx.globalAlpha=.5;ctx.lineWidth=1.2*u;ctx.strokeRect(x,y,w,h);
+  ctx.globalAlpha=1;ctx.lineWidth=3*u;
+  const k=Math.min(w,h)*.28;ctx.beginPath();
+  [[x,y,1,1],[x+w,y,-1,1],[x,y+h,1,-1],[x+w,y+h,-1,-1]].forEach(([a,b,dx,dy])=>{ctx.moveTo(a+dx*k,b);ctx.lineTo(a,b);ctx.lineTo(a,b+dy*k)});
+  ctx.stroke();
+  ctx.globalAlpha=.55;ctx.fillRect(x,y+((t/1.2)%1)*h,w,2*u);
+  ctx.globalAlpha=1;ctx.shadowBlur=0;
+  const fs=11*u,mono=`bold ${fs}px ui-monospace,"Courier New",monospace`;
+  ctx.font=mono;ctx.textAlign='left';
+  const title=F.title||'TARGET',tw=ctx.measureText(title).width+8*u;
+  ctx.fillRect(x,y-fs-6*u,tw,fs+5*u);
+  ctx.fillStyle='#000';ctx.fillText(title,x+4*u,y-5*u);
+  const L=(F.info||'').split('\n').filter(Boolean);
+  if(L.length){
+    ctx.font=`${fs}px ui-monospace,"Courier New",monospace`;
+    const pw=Math.max(...L.map(l=>ctx.measureText(l).width))+12*u,ph=L.length*fs*1.4+8*u;
+    let px=x+w+16*u;if(px+pw>W-2)px=x-16*u-pw;
+    px=Math.max(2,px);const py=Math.max(2,Math.min(y,H-ph-2));
+    ctx.strokeStyle=c;ctx.lineWidth=1.2*u;ctx.beginPath();
+    const ex=px>x?x+w:x;ctx.moveTo(ex,y+10*u);ctx.lineTo(px>x?px-8*u:px+pw+8*u,py+10*u);ctx.lineTo(px>x?px:px+pw,py+10*u);ctx.stroke();
+    ctx.fillStyle='rgba(0,12,14,.72)';ctx.fillRect(px,py,pw,ph);
+    ctx.strokeRect(px,py,pw,ph);
+    let left=Math.floor(Math.max(0,t-.4)*45);ctx.fillStyle=c;
+    L.forEach((l,i)=>{const s=l.slice(0,Math.max(0,left));left-=l.length;ctx.fillText(s,px+6*u,py+4*u+(i+1)*fs*1.4-3*u)});
+  }
+  ctx.restore();
+}
+
+/* ---------- 미리보기 루프 ---------- */
+let last=0;
+function loop(ts){
+  requestAnimationFrame(loop);
+  if(!img||busy||ts-last<1000/v('fps'))return;
+  last=ts;frame((ts/1000)%v('dur'));
+}
+requestAnimationFrame(loop);
+
+/* ---------- 자막 UI ---------- */
+function listSubs(){
+  $('#subs').innerHTML=subs.map((s,i)=>`<div class="row"><input data-k="text" data-i="${i}" value="${esc(s.text)}" placeholder="자막 내용" aria-label="자막 내용"><input type="number" step=".1" min="0" data-k="a" data-i="${i}" value="${s.a}" aria-label="시작 초"><input type="number" step=".1" min="0" data-k="b" data-i="${i}" value="${s.b}" aria-label="끝 초"><button data-del="${i}" aria-label="자막 삭제">✕</button></div>`).join('');
+}
+$('#subs').oninput=e=>{const t=e.target,i=t.dataset.i;if(i!=null)subs[i][t.dataset.k]=t.dataset.k==='text'?t.value:+t.value};
+$('#subs').onclick=e=>{const i=e.target.dataset.del;if(i!=null){subs.splice(i,1);listSubs()}};
+$('#addSub').onclick=()=>{subs.push({text:'',a:0,b:v('dur')});listSubs()};
+listSubs();
+
+/* ---------- 얼굴 박스 UI ---------- */
+function listFaces(){
+  $('#faces').innerHTML=faces.length?faces.map((f,i)=>`<div class="face" style="border-color:${f.c}"><input data-k="title" data-i="${i}" value="${esc(f.title)}" aria-label="박스 이름"><button data-del="${i}" aria-label="박스 삭제">✕</button><textarea data-k="info" data-i="${i}" rows="3" aria-label="박스 정보">${esc(f.info)}</textarea></div>`).join(''):'<p class="hint">화면을 드래그해서 박스를 그려 보세요.</p>';
+}
+$('#faces').oninput=e=>{const t=e.target,i=t.dataset.i;if(i!=null)faces[i][t.dataset.k]=t.value};
+$('#faces').onclick=e=>{const i=e.target.dataset.del;if(i!=null){faces.splice(i,1);listFaces()}};
+const pt=e=>{const r=cv.getBoundingClientRect();return[(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height]};
+const cp=(a,lo,hi)=>Math.max(lo,Math.min(hi,a));
+cv.onpointerdown=e=>{
+  if(!img)return;cv.setPointerCapture(e.pointerId);
+  const[x,y]=pt(e),i=faces.findIndex(f=>x>=f.x&&x<=f.x+f.w&&y>=f.y&&y<=f.y+f.h);
+  drag=i>=0?{mv:faces[i],ox:x-faces[i].x,oy:y-faces[i].y}:{x0:x,y0:y,nw:{x,y,w:0,h:0,c:COL[faces.length%4],title:'',info:''}};
+};
+cv.onpointermove=e=>{
+  if(!drag)return;const[x,y]=pt(e);
+  if(drag.mv){const f=drag.mv;f.x=cp(x-drag.ox,0,1-f.w);f.y=cp(y-drag.oy,0,1-f.h)}
+  else{const n=drag.nw,X=cp(x,0,1),Y=cp(y,0,1);n.x=Math.min(X,drag.x0);n.y=Math.min(Y,drag.y0);n.w=Math.abs(X-drag.x0);n.h=Math.abs(Y-drag.y0)}
+};
+cv.onpointerup=()=>{
+  if(drag&&drag.nw){const n=drag.nw;if(n.w>.02&&n.h>.02){n.title='TARGET-'+String(faces.length+1).padStart(2,'0');n.info='NAME: UNKNOWN\nSTATUS: ???';faces.push(n)}}
+  drag=null;listFaces();
+};
+
+/* ---------- GIF 인코더 (외부 라이브러리 없음) ---------- */
+function buildPalette(hist,n){
+  const items=[];for(let i=0;i<32768;i++)if(hist[i])items.push(i);
+  const boxes=[items];
+  while(boxes.length<n){
+    let bi=-1,best=0,bc=0;
+    boxes.forEach((b,k)=>{
+      if(b.length<2)return;
+      let m0=31,m1=31,m2=31,x0=0,x1=0,x2=0;
+      for(const i of b){const r=i>>10,g=(i>>5)&31,bl=i&31;
+        if(r<m0)m0=r;if(r>x0)x0=r;if(g<m1)m1=g;if(g>x1)x1=g;if(bl<m2)m2=bl;if(bl>x2)x2=bl}
+      [x0-m0,x1-m1,x2-m2].forEach((rg,j)=>{if(rg>best){best=rg;bi=k;bc=j}});
+    });
+    if(bi<0)break;
+    const b=boxes[bi],sh=[10,5,0][bc];
+    b.sort((p,q)=>((p>>sh)&31)-((q>>sh)&31));
+    let tot=0;for(const i of b)tot+=hist[i];
+    let acc=0,m=0;for(;m<b.length-1;m++){acc+=hist[b[m]];if(acc>=tot/2)break}
+    m=Math.min(m,b.length-2);
+    boxes.splice(bi,1,b.slice(0,m+1),b.slice(m+1));
+  }
+  return boxes.map(b=>{let r=0,g=0,bl=0,t=0;for(const i of b){const c=hist[i];r+=(i>>10)*c;g+=((i>>5)&31)*c;bl+=(i&31)*c;t+=c}
+    return[Math.round(r/t*8+4),Math.round(g/t*8+4),Math.round(bl/t*8+4)]});
+}
+function lzw(px){
+  const clear=256,eoi=257,o=[];let cs=9,next=258,cur=0,bits=0,dict=new Map();
+  const emit=c=>{cur|=c<<bits;bits+=cs;while(bits>=8){o.push(cur&255);cur>>=8;bits-=8}};
+  emit(clear);let pre=px[0];
+  for(let i=1;i<px.length;i++){
+    const k=px[i],key=(pre<<8)|k,f=dict.get(key);
+    if(f!==undefined){pre=f;continue}
+    emit(pre);
+    if(next<4096){dict.set(key,next++);if(next>(1<<cs)&&cs<12)cs++}
+    else{emit(clear);dict.clear();next=258;cs=9}
+    pre=k;
+  }
+  emit(pre);emit(eoi);if(bits>0)o.push(cur&255);
+  return o;
+}
+function encodeGif(frames,delay){
+  const hist=new Uint32Array(32768);
+  frames.forEach(d=>{for(let i=0;i<d.length;i+=20)hist[((d[i]>>3)<<10)|((d[i+1]>>3)<<5)|(d[i+2]>>3)]++});
+  const fixed=[[0,0,0],[255,255,255],[55,230,208],[255,61,139],[245,230,66],[255,106,43],[238,34,34],[221,221,221]];
+  const pal=buildPalette(hist,256-fixed.length).concat(fixed);
+  while(pal.length<256)pal.push([0,0,0]);
+  const map=new Int16Array(32768).fill(-1);
+  const near=k=>{
+    if(map[k]>=0)return map[k];
+    const r=((k>>10)<<3)|4,g=(((k>>5)&31)<<3)|4,b=((k&31)<<3)|4;let bd=1e9,bi=0;
+    for(let j=0;j<256;j++){const p=pal[j],e=(p[0]-r)**2+(p[1]-g)**2+(p[2]-b)**2;if(e<bd){bd=e;bi=j}}
+    return map[k]=bi;
+  };
+  const w16=n=>[n&255,n>>8],P=[];
+  P.push(new Uint8Array([71,73,70,56,57,97,...w16(W),...w16(H),0xF7,0,0,...pal.flat()]));
+  P.push(new Uint8Array([0x21,0xFF,11,...[...'NETSCAPE2.0'].map(c=>c.charCodeAt(0)),3,1,0,0,0]));
+  for(const d of frames){
+    const px=new Uint8Array(W*H);
+    for(let i=0,j=0;j<px.length;i+=4,j++)px[j]=near(((d[i]>>3)<<10)|((d[i+1]>>3)<<5)|(d[i+2]>>3));
+    P.push(new Uint8Array([0x21,0xF9,4,0,...w16(delay),0,0,0x2C,0,0,0,0,...w16(W),...w16(H),0,8]));
+    const o=lzw(px);
+    for(let i=0;i<o.length;i+=255){const c=o.slice(i,i+255);P.push(new Uint8Array([c.length,...c]))}
+    P.push(new Uint8Array([0]));
+  }
+  P.push(new Uint8Array([0x3B]));
+  return new Blob(P,{type:'image/gif'});
+}
+
+/* ---------- GIF 저장 ---------- */
+$('#go').onclick=async()=>{
+  if(!img||busy)return;
+  busy=true;const btn=$('#go');btn.disabled=true;
+  const fps=v('fps'),n=Math.max(2,Math.round(v('dur')*fps)),frames=[];
+  try{
+    for(let i=0;i<n;i++){
+      frame(i/fps);frames.push(ctx.getImageData(0,0,W,H).data);
+      btn.textContent=`프레임 그리는 중 ${i+1}/${n}`;
+      if(i%2===0)await new Promise(r=>setTimeout(r));
+    }
+    btn.textContent='GIF로 묶는 중…';await new Promise(r=>setTimeout(r,20));
+    const blob=encodeGif(frames,Math.round(100/fps)),url=URL.createObjectURL(blob);
+    $('#out').innerHTML=`<img src="${url}" alt="완성된 GIF"><p><a href="${url}" download="night-tape.gif">night-tape.gif 다운로드 (${(blob.size/1048576).toFixed(1)}MB)</a><br><span class="hint">이미지를 길게 눌러 저장해도 됩니다. 용량이 크면 크기·노이즈·길이를 줄여 보세요.</span></p>`;
+  }catch(err){$('#out').textContent='GIF를 만들지 못했어요: '+err.message}
+  btn.textContent='GIF 저장하기';btn.disabled=false;busy=false;
+};
+</script>
+</body>
+</html>
