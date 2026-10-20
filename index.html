@@ -13,7 +13,6 @@ h1{margin:0;font:700 26px ui-monospace,"Courier New",monospace;letter-spacing:.0
 h1 i{color:var(--red);font-style:normal;animation:b 1s steps(1) infinite}
 @keyframes b{50%{opacity:0}}
 @media(prefers-reduced-motion:reduce){h1 i{animation:none}}
-header p{margin:4px 0 0;color:var(--dim)}
 main{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:20px;padding:16px 24px 40px;align-items:start}
 @media(max-width:900px){main{grid-template-columns:1fr;padding:12px}}
 #stage{position:relative;background:#000;border:1px solid var(--ln);min-height:240px;display:grid;place-items:center}
@@ -36,9 +35,13 @@ button:hover{border-color:var(--bone)}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--cy);outline-offset:1px}
 .btn{background:var(--red);border-color:var(--red);color:#fff;font-weight:700;width:100%;padding:10px}
 .btn:disabled{opacity:.6;cursor:wait}
+.btn.alt{background:transparent;color:var(--bone);border-color:var(--ln);margin-top:8px}
 .row{display:grid;grid-template-columns:1fr 56px 56px 30px;gap:4px;margin-bottom:6px}
 .row input[type=number]{padding:5px 4px}
 .face{border-left:3px solid var(--cy);padding-left:8px;margin-bottom:10px;display:grid;grid-template-columns:1fr 30px;gap:4px}
+.face .opts{grid-column:1/3;display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:12px;color:var(--dim)}
+.face .opts input[type=color]{width:34px;height:26px;padding:1px}
+.face .opts input[type=number]{width:52px}
 .face textarea{grid-column:1/3;resize:vertical;font:12px/1.4 ui-monospace,"Courier New",monospace}
 #out{margin-top:10px;text-align:center}
 #out img{max-width:100%;border:1px solid var(--ln)}
@@ -48,7 +51,6 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <body>
 <header>
   <h1><i>●</i> NIGHT TAPE</h1>
-  <p>사진을 넣으면 낡은 캠코더로 찍은 공포영화 화면처럼 떨리는 GIF로 만들어 줍니다.</p>
 </header>
 <main>
   <div>
@@ -79,7 +81,6 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       <h2>자막</h2>
       <div id="subs"></div>
       <button id="addSub">자막 추가</button>
-      <p class="hint">시간은 GIF 안의 초 단위입니다. 줄바꿈은 Enter 대신 \n 을 쓰세요.</p>
     </section>
     <section>
       <h2>얼굴 박스</h2>
@@ -91,6 +92,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       <div class="r2">프레임<select id="fps"><option>8</option><option>10</option><option selected>12</option><option>15</option></select></div>
       <p></p>
       <button class="btn" id="go" disabled>GIF 저장하기</button>
+      <button class="btn alt" id="png" disabled>PNG 저장하기 (현재 화면)</button>
     </section>
   </div>
 </main>
@@ -108,7 +110,7 @@ let subs=[],faces=[];
 function load(file){
   if(!file||!file.type.startsWith('image/'))return;
   const im=new Image();
-  im.onload=()=>{img=im;setSize();$('#empty').hidden=true;$('#go').disabled=false};
+  im.onload=()=>{img=im;setSize();$('#empty').hidden=true;$('#go').disabled=false;$('#png').disabled=false};
   im.src=URL.createObjectURL(file);
 }
 function setSize(){
@@ -210,9 +212,9 @@ function drawFace(F,t,u){
   const k=Math.min(w,h)*.28;ctx.beginPath();
   [[x,y,1,1],[x+w,y,-1,1],[x,y+h,1,-1],[x+w,y+h,-1,-1]].forEach(([a,b,dx,dy])=>{ctx.moveTo(a+dx*k,b);ctx.lineTo(a,b);ctx.lineTo(a,b+dy*k)});
   ctx.stroke();
-  ctx.globalAlpha=.55;ctx.fillRect(x,y+((t/1.2)%1)*h,w,2*u);
+  if(F.scan!==false){ctx.globalAlpha=.55;ctx.fillRect(x,y+((t/1.2)%1)*h,w,2*u)}
   ctx.globalAlpha=1;ctx.shadowBlur=0;
-  const fs=11*u,mono=`bold ${fs}px ui-monospace,"Courier New",monospace`;
+  const fs=(F.fs||11)*u,mono=`bold ${fs}px ui-monospace,"Courier New",monospace`;
   ctx.font=mono;ctx.textAlign='left';
   const title=F.title||'TARGET',tw=ctx.measureText(title).width+8*u;
   ctx.fillRect(x,y-fs-6*u,tw,fs+5*u);
@@ -234,11 +236,11 @@ function drawFace(F,t,u){
 }
 
 /* ---------- 미리보기 루프 ---------- */
-let last=0;
+let last=0,curT=0;
 function loop(ts){
   requestAnimationFrame(loop);
   if(!img||busy||ts-last<1000/v('fps'))return;
-  last=ts;frame((ts/1000)%v('dur'));
+  last=ts;curT=(ts/1000)%v('dur');frame(curT);
 }
 requestAnimationFrame(loop);
 
@@ -253,16 +255,20 @@ listSubs();
 
 /* ---------- 얼굴 박스 UI ---------- */
 function listFaces(){
-  $('#faces').innerHTML=faces.length?faces.map((f,i)=>`<div class="face" style="border-color:${f.c}"><input data-k="title" data-i="${i}" value="${esc(f.title)}" placeholder="박스 제목" aria-label="박스 제목"><button data-del="${i}" aria-label="박스 삭제">✕</button><textarea data-k="info" data-i="${i}" rows="3" placeholder="정보를 한 줄에 하나씩 적으세요" aria-label="박스 정보">${esc(f.info)}</textarea></div>`).join(''):'<p class="hint">화면을 드래그해서 박스를 그려 보세요.</p>';
+  $('#faces').innerHTML=faces.length?faces.map((f,i)=>`<div class="face" style="border-color:${f.c}"><input data-k="title" data-i="${i}" value="${esc(f.title)}" placeholder="박스 제목" aria-label="박스 제목"><button data-del="${i}" aria-label="박스 삭제">✕</button><textarea data-k="info" data-i="${i}" rows="3" placeholder="정보를 한 줄에 하나씩 적으세요" aria-label="박스 정보">${esc(f.info)}</textarea><div class="opts"><label style="display:flex;gap:4px;align-items:center">색<input type="color" data-k="c" data-i="${i}" value="${f.c}"></label><label style="display:flex;gap:4px;align-items:center"><input type="checkbox" data-k="scan" data-i="${i}" ${f.scan?'checked':''}>스캔선</label><label style="display:flex;gap:4px;align-items:center">글자<input type="number" data-k="fs" data-i="${i}" min="6" max="40" value="${f.fs}"></label></div></div>`).join(''):'<p class="hint">화면을 드래그해서 박스를 그려 보세요.</p>';
 }
-$('#faces').oninput=e=>{const t=e.target,i=t.dataset.i;if(i!=null)faces[i][t.dataset.k]=t.value};
+$('#faces').oninput=e=>{
+  const t=e.target,i=t.dataset.i,k=t.dataset.k;if(i==null)return;
+  faces[i][k]=t.type==='checkbox'?t.checked:k==='fs'?(+t.value||11):t.value;
+  if(k==='c')t.closest('.face').style.borderColor=t.value;
+};
 $('#faces').onclick=e=>{const i=e.target.dataset.del;if(i!=null){faces.splice(i,1);listFaces()}};
 const pt=e=>{const r=cv.getBoundingClientRect();return[(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height]};
 const cp=(a,lo,hi)=>Math.max(lo,Math.min(hi,a));
 cv.onpointerdown=e=>{
   if(!img)return;cv.setPointerCapture(e.pointerId);
   const[x,y]=pt(e),i=faces.findIndex(f=>x>=f.x&&x<=f.x+f.w&&y>=f.y&&y<=f.y+f.h);
-  drag=i>=0?{mv:faces[i],ox:x-faces[i].x,oy:y-faces[i].y}:{x0:x,y0:y,nw:{x,y,w:0,h:0,c:COL[faces.length%4],title:'',info:''}};
+  drag=i>=0?{mv:faces[i],ox:x-faces[i].x,oy:y-faces[i].y}:{x0:x,y0:y,nw:{x,y,w:0,h:0,c:COL[faces.length%4],title:'',info:'',scan:true,fs:11}};
 };
 cv.onpointermove=e=>{
   if(!drag)return;const[x,y]=pt(e);
@@ -343,6 +349,17 @@ function encodeGif(frames,delay){
   P.push(new Uint8Array([0x3B]));
   return new Blob(P,{type:'image/gif'});
 }
+
+/* ---------- PNG 저장 ---------- */
+$('#png').onclick=()=>{
+  if(!img||busy)return;
+  frame(curT);
+  cv.toBlob(b=>{
+    const url=URL.createObjectURL(b);
+    $('#out').innerHTML=`<img src="${url}" alt="완성된 PNG"><p><a href="${url}" download="night-tape.png">night-tape.png 다운로드 (${(b.size/1048576).toFixed(1)}MB)</a></p>`;
+    const a=document.createElement('a');a.href=url;a.download='night-tape.png';a.click();
+  },'image/png');
+};
 
 /* ---------- GIF 저장 ---------- */
 $('#go').onclick=async()=>{
